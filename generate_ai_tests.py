@@ -5,10 +5,7 @@ import time
 from pathlib import Path
 from openai import OpenAI
 
-# 设置 OpenAI API Key（在系统环境变量中）
-# openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# 项目目录
+# project dir
 SRC_DIR = Path(__file__).parent / "app"
 OUTPUT_DIR = Path(__file__).parent / "tests/ai_generated"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -16,7 +13,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TARGETS_FILE = Path(__file__).parent / "targets.txt"
 
 def read_targets():
-    """读取 targets.txt，返回 [("app/models.py", "User.verify_password"), ...]"""
+    """read targets.txt，return [("app/models.py", "User.verify_password"), ...]"""
     targets = []
     with open(TARGETS_FILE, "r") as f:
         for line in f:
@@ -32,7 +29,7 @@ def read_targets():
 
 
 def extract_function_source1(filepath, target_name):
-    """解析 Python AST，提取指定函数/方法源码"""
+    """Parse Python AST，extract the source code of the specified function/method"""
     abs_path = os.path.join(SRC_DIR, filepath)
     with open(abs_path, "r") as f:
         source = f.read()
@@ -42,7 +39,7 @@ def extract_function_source1(filepath, target_name):
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             if node.name == target_name.split(".")[0]:
-                # 如果是类，查找方法
+                # If it is a class, search the method
                 if isinstance(node, ast.ClassDef) and "." in target_name:
                     method_name = target_name.split(".")[1]
                     for item in node.body:
@@ -56,10 +53,10 @@ def extract_function_source1(filepath, target_name):
 
 def extract_function_source(filepath, target_name):
     """
-    解析 Python AST，提取指定函数或方法源码。
-    如果是类中的方法，则返回整个类的源码。
+    Parse Python AST，Extract the source code of the specified function or method.
+    If it is a method within a class, then return the entire source code of the class.
 
-    target_name 支持格式：
+    target_name Support format：
     - "module.py::function_name"
     - "module.py::ClassName.method_name"
     """
@@ -69,19 +66,19 @@ def extract_function_source(filepath, target_name):
 
     tree = ast.parse(source)
 
-    # 处理可能的类方法 target
+    # Handle possible class methods target
     if "." in target_name:
         class_name, method_name = target_name.split(".")
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == class_name:
-                # 找到方法，确认类中包含目标方法
+                # Find a method to verify that the class contains the target method
                 for item in node.body:
                     if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == method_name:
-                        # 返回整个类源码
+                        # return source code
                         return ast.get_source_segment(source, node)
-        return None  # 没找到对应类或方法
+        return None  # No corresponding class or method was found.
     else:
-        # 目标是函数或类本身
+        # The goal is the function or the class itself
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == target_name:
                 return ast.get_source_segment(source, node)
@@ -90,23 +87,23 @@ def extract_function_source(filepath, target_name):
 
 def read_python_file(file_path: str) -> str:
     """
-    读取 Python 文件内容并返回字符串。
+    Read the content of the Python file and return it as a string.
 
     Args:
-        file_path (str): Python 文件的绝对或相对路径
+        file_path (str): Python The absolute or relative path of the file
 
     Returns:
-        str: 文件的完整代码内容
+        str: The complete code content of the file
 
     Raises:
-        FileNotFoundError: 文件不存在时抛出
-        IOError: 文件读取失败时抛出
+        FileNotFoundError: Throws an exception when the file does not exist.
+        IOError: Throws an exception when file reading fails.
     """
-    # 检查文件存在性
+    # Check the existence of the file
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    # 确保是 Python 文件
+    # Make sure a Python file
     if not file_path.endswith(".py"):
         raise ValueError("Only Python files (.py) are supported.")
 
@@ -133,7 +130,7 @@ Ensure:
     client = OpenAI(api_key=api_key)
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # 可以换成 gpt-4.1/gpt-5 等
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are an expert Python testing assistant."},
             {"role": "user", "content": prompt},
@@ -145,7 +142,7 @@ Ensure:
     return response.choices[0].message.content
 
 def save_tests(test_code, target_name):
-    """保存测试代码到 tests/ai_generated/"""
+    """Save the test code to tests/ai_generated/"""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     filename = f"test_{target_name.replace('.', '_')}.py"
     path = os.path.join(OUTPUT_DIR, filename)
@@ -156,10 +153,10 @@ def save_tests(test_code, target_name):
 
 
 def main():
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY") # Obtain the API key from the environment variables
     targets = read_targets()
     for filepath, target in targets:
-        if target:  # 针对函数/方法
+        if target:
             code = extract_function_source(filepath, target)
             if not code:
                 print(f"[!] Could not find {target} in {filepath}")
