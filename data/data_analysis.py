@@ -22,7 +22,7 @@ def mean_ci(x, confidence=0.95):
     n = len(x)
     m = np.mean(x)
     se = np.std(x, ddof=1) / sqrt(n)
-    h = 1.96 * se  # 对应95%置信区间的Z值
+    h = 1.96 * se  # The Z value corresponding to the 95% confidence interval
     return m - h, m + h
 
 
@@ -54,18 +54,18 @@ def analyze_metric(group_A, group_B, metric_name):
     stat_B, p_B = shapiro(group_B)
     normal_A = p_A > 0.05
     normal_B = p_B > 0.05
-    print(f"A组正态性 p={p_A:.4f}, {'近似正态' if normal_A else '非正态'}")
-    print(f"B组正态性 p={p_B:.4f}, {'近似正态' if normal_B else '非正态'}")
+    print(f"GroupA normality p={p_A:.4f}, {'Approximately normal' if normal_A else 'non-normal'}")
+    print(f"GroupB normality p={p_B:.4f}, {'Approximately normal' if normal_B else 'non-normal'}")
 
     # Select the inspection method
     if normal_A and normal_B:
         # independent-samples T test（Welch t-test）
         t_stat, p_val = ttest_ind(group_A, group_B, equal_var=False)
-        method = "独立样本 t 检验（Welch t-test）"
+        method = "Independent samples t-test（Welch t-test）"
     else:
         # Wilcoxon rank sum test
         t_stat, p_val = ranksums(group_A, group_B)
-        method = "Wilcoxon rank-sum 检验（非参数）"
+        method = "Wilcoxon rank-sum test (Non-parametric)"
 
     # Calculate the effect size
     d = cohen_d(group_A, group_B)
